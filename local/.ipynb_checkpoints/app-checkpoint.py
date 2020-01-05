@@ -162,7 +162,11 @@ def google_geo(srch_list,pois,radius):
     records.reset_index(drop = True,inplace = True)
     records["link"]=records["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
     return(records.to_html(escape=False))
-        
+
+# def kakao_api(centers_inp,pois_inp,radius):
+#     centers = centers_inp.split(",")
+#     pois = pois_inp.split(",")
+    
 #========================================================================
 
 
@@ -228,8 +232,11 @@ def home():
     
     return render_template("form.html")
 
-@app.route("/kr", methods=["GET", "POST"])
-def kr():
+# @app.route("/kr", methods=["GET", "POST"])
+# def kr():
+#     if request.method == "POST":
+#         asdf
     
+#     return render_template("form_kr.html")
 if __name__ == "__main__":
     app.run(debug=True)
