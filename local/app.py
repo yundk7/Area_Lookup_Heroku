@@ -217,9 +217,9 @@ def home():
         else:
             API_record = ""
         return(crime_html
-               +"RENT"
+               +"RENT: $/sqft"
                +rent_html
-               +"SALES"
+               +"SALES: $/sqft"
                +sales_html
                +"RATIO (FOR SIMPLE CALCULATION, USED EQATION: ROI = RENT*12/SALES*100)"
                +ratio_html
@@ -228,6 +228,8 @@ def home():
     
     return render_template("form.html")
 
-
+@app.route("/kr", methods=["GET", "POST"])
+def kr():
+    
 if __name__ == "__main__":
     app.run(debug=True)
