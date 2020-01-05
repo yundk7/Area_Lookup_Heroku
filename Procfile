@@ -1,1 +1,1 @@
-web: gunicorn local.app:app
+web: gunicorn local_py.app:app
