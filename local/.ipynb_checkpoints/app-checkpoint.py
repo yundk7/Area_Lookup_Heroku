@@ -291,12 +291,12 @@ def home():
         
         if pois != "":
             if typ1 != "Address":
-                API_record = google_geo(zips,pois,radius).to_html()
+                API_record = google_geo(zips,pois,radius)
             if typ1 == "Address":
-                API_record = google_geo(addresses,pois,radius).to_html()
+                API_record = google_geo(addresses,pois,radius)
             geo_plot = plotly_geo(API_record)
         else:
-            API_record = ""
+            API_record = pd.DataFrame()
             geo_plot = ""
         return(crime_html
                +"RENT: $/sqft"
@@ -305,7 +305,7 @@ def home():
                +sales_html
                +"RATIO (FOR SIMPLE CALCULATION, USED EQATION: ROI = RENT*12/SALES*100)"
                +ratio_html
-               +API_record
+               +API_record.to_html()
                +geo_plot
               )
     
