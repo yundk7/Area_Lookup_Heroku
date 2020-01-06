@@ -253,13 +253,13 @@ def home():
         typ1 = typ
         srch = request.form["srch"]
         radius = request.form["radius"]
+        if radius == "":
+            radius = 15000
         pois = request.form["pois"]
         
         if typ == "Address":
             addresses = srch.split(",")
             srch = findzip(srch)
-            if radius == "":
-                radius = 15000
             typ = "Zip"
         zillow_rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")#for rent
         zillow_rent = zillowELT(zillow_rent,typ,srch)
@@ -288,7 +288,7 @@ def home():
         
         zips = ratio_df.columns.str.replace(" ","").str.split(":")
         zips = [item[1] for item in zips]
-        
+        print(zips)
         if pois != "":
             if typ1 != "Address":
                 API_record = google_geo(zips,pois,radius)
@@ -334,5 +334,6 @@ def ggl():
         plot = plotly_geo(df)
         return(df.to_html(escape=False)+ plot)
     return render_template("form_ggl.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
