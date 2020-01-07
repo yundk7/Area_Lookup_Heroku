@@ -5,6 +5,7 @@ from flask import (
     request)
 from IPython.display import HTML
 import pandas as pd
+pd.set_option('display.max_colwidth', -1)
 
 import plotly as py
 import plotly.graph_objs as go
@@ -175,7 +176,7 @@ def google_geo(srch_list,pois,radius):
                 n+=1
     records.reset_index(drop = True,inplace = True)
     records = records[["center","poi","name","score","reviews","price","price","link","address","X","Y"]]
-#     records["link"]=records["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
+    records["link"]=records["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
     return(records)
 
 def kakao_api(centers_inp,pois_inp,radius):
@@ -227,7 +228,7 @@ def kakao_api(centers_inp,pois_inp,radius):
 #     records = records[["center","poi","name","address","distance","link","X","Y"]]
 #     records.reset_index(drop = True,inplace = True)
 #     records["link"]=records["link"].apply(lambda x: '<a href="http://place.map.kakao.com/{0}">link</a>'.format(x))
-#     records["link"]=records["link"].apply(lambda x: '<a href="{0}">link</a>'.format(x))
+    records["link"]=records["link"].apply(lambda x: '<a href="{0}">link</a>'.format(x))
     return (records)
 
 def plotly_geo(df):
@@ -243,6 +244,11 @@ def plotly_geo(df):
     fig.update_layout(autosize=True,width=1500,height=750)
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
+
+def click_check():
+    df = pd.DataFrame({"title":["google","naver","yahoo","github"],"link":["google","naver","yahoo","github"]})
+#     df["link"] = df["link"].apply(lambda x: '<a href="http://{0}.com">link</a>'.format(x))
+    return(df)
 #========================================================================
 
 
@@ -292,8 +298,10 @@ def home():
         if pois != "":
             if typ1 != "Address":
                 API_record = google_geo(zips,pois,radius)
+#                 API_record["link"]=API_record["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
             if typ1 == "Address":
                 API_record = google_geo(addresses,pois,radius)
+#                 API_record["link"]=API_record["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
             geo_plot = plotly_geo(API_record)
         else:
             API_record = pd.DataFrame()
@@ -305,7 +313,7 @@ def home():
                +sales_html
                +"RATIO (FOR SIMPLE CALCULATION, USED EQATION: ROI = RENT*12/SALES*100)"
                +ratio_html
-               +API_record.to_html()
+               +API_record.to_html(escape=False)
                +geo_plot
               )
     
@@ -335,5 +343,11 @@ def ggl():
         return(df.to_html(escape=False)+ plot)
     return render_template("form_ggl.html")
 
+@app.route("/click")
+def clicK():
+#     df = pd.DataFrame({"title":["google","naver","yahoo","github"],"link":["google","naver","yahoo","github"]})
+    df = click_check()
+    df["link"] = df["link"].apply(lambda x: '<a href="http://{0}.com">link</a>'.format(x))
+    return(df.to_html(escape=False))
 if __name__ == "__main__":
     app.run(debug=True)
