@@ -115,7 +115,6 @@ def google_geo(srch_list,pois,radius):
         link = geo_data["results"][0]["place_id"]
         center_df = pd.DataFrame({"center":[s],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[target_adr],"link":[link],"Y":[float(lat)],"X":[float(lng)]})
         records = records.append(center_df)
-#         return(records.to_html())
         for poi in pois:
             params = {
                 "location": target_coordinates,
@@ -222,12 +221,7 @@ def kakao_api(centers_inp,pois_inp,radius):
                                            "link":[place_url],
                                            "X":[float(x1)],
                                            "Y":[float(y1)]})
-#                     records["X"] = pd.to_numeric(records["X"],errors = "coerce")
-#                     records["Y"] = pd.to_numeric(records["Y"],errors = "coerce")
                     records=records.append(add)
-#     records = records[["center","poi","name","address","distance","link","X","Y"]]
-#     records.reset_index(drop = True,inplace = True)
-#     records["link"]=records["link"].apply(lambda x: '<a href="http://place.map.kakao.com/{0}">link</a>'.format(x))
     records["link"]=records["link"].apply(lambda x: '<a href="{0}">link</a>'.format(x))
     return (records)
 
@@ -244,11 +238,6 @@ def plotly_geo(df):
     fig.update_layout(autosize=True,width=1500,height=750)
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
-
-def click_check():
-    df = pd.DataFrame({"title":["google","naver","yahoo","github"],"link":["google","naver","yahoo","github"]})
-#     df["link"] = df["link"].apply(lambda x: '<a href="http://{0}.com">link</a>'.format(x))
-    return(df)
 #========================================================================
 
 
@@ -311,7 +300,7 @@ def home():
                +rent_html
                +"SALES: $/sqft"
                +sales_html
-               +"RATIO (FOR SIMPLE CALCULATION, USED EQATION: ROI = RENT*12/SALES*100)"
+               +"ROI (PER YERAR: ROI = RENT*12/SALES*100)"
                +ratio_html
                +API_record.to_html(escape=False)
                +geo_plot
@@ -343,11 +332,5 @@ def ggl():
         return(df.to_html(escape=False)+ plot)
     return render_template("form_ggl.html")
 
-@app.route("/click")
-def clicK():
-#     df = pd.DataFrame({"title":["google","naver","yahoo","github"],"link":["google","naver","yahoo","github"]})
-    df = click_check()
-    df["link"] = df["link"].apply(lambda x: '<a href="http://{0}.com">link</a>'.format(x))
-    return(df.to_html(escape=False))
 if __name__ == "__main__":
     app.run(debug=True)
