@@ -18,6 +18,7 @@ import math
 from bs4 import BeautifulSoup as bs
 import re
 
+from sqlalchemy import create_engine
 
 app = Flask(__name__)
 
@@ -332,5 +333,26 @@ def ggl():
         return(df.to_html(escape=False)+ plot)
     return render_template("form_ggl.html")
 
+@app.route("/create", methods=["GET", "POST"])
+def create():
+    if request.method=="POST":
+        a = request.form["a"]
+        a = a.split(",")
+        b = request.form["b"]
+        b=b.split(",")
+        con = create_engine("sqlite:///db.sqlite")
+        df = pd.DataFrame({"a":a,"b":b})
+        df.to_sql("df",con,if_exists="append",index=False)
+        
+        navigate = pd.DataFrame({"Table Summary":["/show"]})
+        navigate["Table Summary"]=navigate["Table Summary"].apply(lambda x: '<a href="{0}">To See Summary in tables only</a>'.format(x))
+        return(df.to_html() + navigate.to_html(escape=False))
+    return render_template("create.html")
+
+@app.route("/show")
+def show():
+    con = create_engine("sqlite:///db.sqlite")
+    df = pd.read_sql("df",con)
+    return(df.to_html())
 if __name__ == "__main__":
     app.run(debug=True)

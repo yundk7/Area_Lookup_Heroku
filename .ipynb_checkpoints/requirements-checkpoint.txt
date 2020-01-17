@@ -31,3 +31,4 @@ lxml==4.3.4
 html5lib==1.0.1
 beautifulsoup4==4.7.1
 DateTime==4.3
+statsmodels==0.10.0
