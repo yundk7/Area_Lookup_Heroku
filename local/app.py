@@ -20,7 +20,7 @@ import requests
 # import re
 from sqlalchemy import create_engine
 
-from sklearn import linear_model
+# from sklearn import linear_model
 import statsmodels.api as sm
 
 app = Flask(__name__)
