@@ -97,7 +97,7 @@ def regression(df):
 def google_zip_df(df,pois):
     records = pd.DataFrame()
     
-    from config import gkey
+    from key import gkey
     pois = pois.split(",")
     for n in range(0,len(df)):
         center_zip = df.index[n]
@@ -181,7 +181,7 @@ def plotly_geo(df):
     df.loc[df['poi'] == "YOU ARE HERE", 'reviews'] = 0
     df["reviews"].fillna(0,inplace=True)
     
-    from config import plotly_token
+    from key import plotly_token
     px.set_mapbox_access_token(plotly_token)
     hover = ["reviews"]
 #     if hover in (df.columns):
@@ -195,7 +195,7 @@ def plotly_geo(df):
 
 def google_geo(srch_list,pois,radius):
     records = pd.DataFrame()
-    from config import gkey
+    from key import gkey
 #     srch_list = ["91765","60607"]
     # srch_list = ["walnut high school","235 west van buren"]
 #     pois = "restaurants,subway station"
@@ -280,7 +280,7 @@ def kakao_api(centers_inp,pois_inp,radius):
     records = pd.DataFrame()
     for center in centers:
         url = 'https://dapi.kakao.com/v2/local/search/keyword.json?query='+center
-        from config import kkey
+        from key import kkey
         headers = {"Authorization": kkey}
         result = json.loads(str(requests.get(url,headers=headers).text))
         #     return result
