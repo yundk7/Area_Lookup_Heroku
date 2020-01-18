@@ -96,7 +96,7 @@ def regression(df):
 
 def google_zip_df(df,pois):
     records = pd.DataFrame()
-    gkey = "AIzaSyA-Rjp6nOeJp6815Xt1Kkuxc5XKMiKl_yA"
+    from config import gkey
     pois = pois.split(",")
     for n in range(0,len(df)):
         center_zip = df.index[n]
@@ -178,7 +178,8 @@ def plotly_geo(df):
     df["size"] = 10
     df.loc[df['poi'] == "YOU ARE HERE", 'size'] = 20
     df.loc[df['poi'] == "YOU ARE HERE", 'reviews'] = 0
-    px.set_mapbox_access_token("pk.eyJ1IjoidGl2bWU3IiwiYSI6ImNrMWEwZDVtNDI4Zm4zYm1vY3o3Z25zejEifQ._yTPkj3nXTzor72zIevLCQ")
+    from config import plotly_token
+    px.set_mapbox_access_token(plotly_token)
     hover = ["reviews"]
 #     if hover in (df.columns):
 #         hover = ["name","reviews"]
