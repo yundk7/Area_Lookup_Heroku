@@ -26,6 +26,16 @@ import statsmodels.api as sm
 app = Flask(__name__)
 
 #FUNCTIONS=======================================================
+def key(key):
+    #API keys
+    if key == "gkey":
+        key = "AIzaSyCx9a5SZ-y42Wu2fQeqmHsfKFRk4djJsAs"
+    elif key == "kkey":
+        key = "KakaoAK 8809fcb48aa9900788adbd9f162c6b25"
+    elif key == "ptoken":
+        key = "pk.eyJ1IjoidGl2bWU3IiwiYSI6ImNrMWEwZDVtNDI4Zm4zYm1vY3o3Z25zejEifQ._yTPkj3nXTzor72zIevLCQ"
+    return(key)
+
 def zillowELT(df,zips_list):
     df.rename(columns = {"RegionName":"zip"},inplace=True)
     df["zip"] = df["zip"].astype(str).str.zfill(5)

@@ -26,6 +26,16 @@ import statsmodels.api as sm
 app = Flask(__name__)
 
 #FUNCTIONS=======================================================
+def key(key):
+    #API keys
+    if key == "gkey":
+        key = "AIzaSyCx9a5SZ-y42Wu2fQeqmHsfKFRk4djJsAs"
+    elif key == "kkey":
+        key = "KakaoAK 8809fcb48aa9900788adbd9f162c6b25"
+    elif key == "ptoken":
+        key = "pk.eyJ1IjoidGl2bWU3IiwiYSI6ImNrMWEwZDVtNDI4Zm4zYm1vY3o3Z25zejEifQ._yTPkj3nXTzor72zIevLCQ"
+    return(key)
+
 def zillowELT(df,zips_list):
     df.rename(columns = {"RegionName":"zip"},inplace=True)
     df["zip"] = df["zip"].astype(str).str.zfill(5)
@@ -96,8 +106,7 @@ def regression(df):
 
 def google_zip_df(df,pois):
     records = pd.DataFrame()
-    
-    from key import gkey
+    gkey = key("gkey")
     pois = pois.split(",")
     for n in range(0,len(df)):
         center_zip = df.index[n]
@@ -181,8 +190,8 @@ def plotly_geo(df):
     df.loc[df['poi'] == "YOU ARE HERE", 'reviews'] = 0
     df["reviews"].fillna(0,inplace=True)
     
-    from key import plotly_token
-    px.set_mapbox_access_token(plotly_token)
+    ptoken = key("ptoken")
+    px.set_mapbox_access_token(ptoken)
     hover = ["reviews"]
 #     if hover in (df.columns):
 #         hover = ["name","reviews"]
@@ -195,11 +204,7 @@ def plotly_geo(df):
 
 def google_geo(srch_list,pois,radius):
     records = pd.DataFrame()
-    from key import gkey
-#     srch_list = ["91765","60607"]
-    # srch_list = ["walnut high school","235 west van buren"]
-#     pois = "restaurants,subway station"
-#     radius = 15000
+    gkey = key("gkey")
     pois = pois.split(",")
     for s in srch_list:
         target_url = (f'https://maps.googleapis.com/maps/api/geocode/json?address={s}&key={gkey}')
@@ -280,7 +285,7 @@ def kakao_api(centers_inp,pois_inp,radius):
     records = pd.DataFrame()
     for center in centers:
         url = 'https://dapi.kakao.com/v2/local/search/keyword.json?query='+center
-        from key import kkey
+        kkey = key("kkey")
         headers = {"Authorization": kkey}
         result = json.loads(str(requests.get(url,headers=headers).text))
         #     return result
