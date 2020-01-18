@@ -189,6 +189,8 @@ def plotly_geo(df):
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
 #========================================================================
+
+
 @app.route("/")
 def home():
     #loading homepage = preparing database
@@ -271,6 +273,12 @@ def us():
         
         df = merge_dfs([df,crime,area])
         
+        #since heroku is limited with request time, sampling out 10 zip codes to analyze
+        sample = 10
+        if len(df) < sample:
+            sample = len(df)
+        df = df.sample(sample)
+        
         api = google_zip_df(df,poi)
         geo_plt = plotly_geo(api)
         
@@ -317,6 +325,7 @@ def us():
         df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         
         return (
+            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 10 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+
             df.to_html(escape=False)+
             "GEO PLOTTING PLACES OF INTEREST"+
             geo_plt+
@@ -356,7 +365,8 @@ def summary():
     
     n = pd.DataFrame().to_html()
     return(
-            "Regression analysis on rent"+render_template("n.html")+
+        "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 10 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+render_template("n.html")+    
+        "Regression analysis on rent"+render_template("n.html")+
         rent0.to_html()+rent1.to_html()+render_template("n.html")+
         "Regression analysis on sales"+render_template("n.html")+
         sales0.to_html()+sales1.to_html()+render_template("n.html")+
