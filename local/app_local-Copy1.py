@@ -14,8 +14,8 @@ import plotly.express as px
 py.offline.init_notebook_mode(connected = True)
 
 import requests
-import json
-import math
+# import json
+# import math
 # from bs4 import BeautifulSoup as bs
 # import re
 from sqlalchemy import create_engine
@@ -188,10 +188,8 @@ def plotly_geo(df):
     df["size"] = 10
     df.loc[df['poi'] == "YOU ARE HERE", 'size'] = 20
     df.loc[df['poi'] == "YOU ARE HERE", 'reviews'] = 0
-    df["reviews"].fillna(0,inplace=True)
-    
-    ptoken = key("ptoken")
-    px.set_mapbox_access_token(ptoken)
+    plotly_token = key("ptoken")
+    px.set_mapbox_access_token(plotly_token)
     hover = ["reviews"]
 #     if hover in (df.columns):
 #         hover = ["name","reviews"]
@@ -201,171 +199,36 @@ def plotly_geo(df):
     fig.update_layout(autosize=True,width=1500,height=750)
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
-
-def google_geo(srch_list,pois,radius):
-    records = pd.DataFrame()
-    gkey = key("gkey")
-    pois = pois.split(",")
-    for s in srch_list:
-        target_url = (f'https://maps.googleapis.com/maps/api/geocode/json?address={s}&key={gkey}')
-        geo_data = requests.get(target_url).json()
-        target_adr = geo_data["results"][0]["formatted_address"]
-        lat = geo_data["results"][0]["geometry"]["location"]["lat"]
-        lng = geo_data["results"][0]["geometry"]["location"]["lng"]
-        target_coordinates = str(lat) + "," + str(lng)
-        link = geo_data["results"][0]["place_id"]
-        center_df = pd.DataFrame({"center":[s],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[target_adr],"link":[link],"Y":[float(lat)],"X":[float(lng)]})
-        records = records.append(center_df)
-        for poi in pois:
-            params = {
-                "location": target_coordinates,
-                "keyword": poi,
-                "radius": radius,
-            #     "type": target_type,
-                "key": gkey
-            }
-
-            # base url
-            base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-
-            # run a request using our params dictionary
-            response = requests.get(base_url, params=params)
-            places_data = response.json()
-            n=0
-            # while int(n) > len(places_data):
-            while int(n) < len(places_data["results"]):
-                try:
-                    price=places_data["results"][int(n)]["price_level"]
-                except KeyError:
-                    price = "NA"
-                try:
-                    link=places_data["results"][int(n)]["place_id"]
-                except KeyError:
-                    link = "NA"
-                try:
-                    score = places_data["results"][int(n)]["rating"]
-                except KeyError:
-                    score = "NA"
-                try:
-                    reviews = int(places_data["results"][int(n)]["user_ratings_total"])
-                except KeyError:
-                    reviews = "NA"
-                try:
-                    lat1 = places_data["results"][int(n)]["geometry"]["location"]["lat"]
-                except KeyError:
-                    lat1 = "NA"
-                try:
-                    lng1 = places_data["results"][int(n)]["geometry"]["location"]["lng"]
-                except KeyError:
-                    lng1 = "NA"
-                content = pd.DataFrame ({"center":target_adr,"poi":poi,
-                                    "name":[places_data["results"][int(n)]["name"]],
-                                    "score":score,
-                                     "reviews":reviews,
-                                     "price":price,
-                                     "link":link,
-                                    "address":[places_data["results"][int(n)]["vicinity"]],
-                                         "Y":[lat1],
-                                         "X":[lng1]
-            #                        "distance":distance,
-            #                         "drive":duration,
-            #                         "public":transit_dur,
-            #                         "walk":walk_dur
-                                        })
-                records = records.append(content)
-                n+=1
-    records.reset_index(drop = True,inplace = True)
-    records = records[["center","poi","name","score","reviews","price","price","link","address","X","Y"]]
-    records["link"]=records["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
-    return(records)
-
-def kakao_api(centers_inp,pois_inp,radius):
-    centers = centers_inp.split(",")
-    pois = pois_inp.split(",")
-    records = pd.DataFrame()
-    for center in centers:
-        url = 'https://dapi.kakao.com/v2/local/search/keyword.json?query='+center
-        kkey = key("kkey")
-        headers = {"Authorization": kkey}
-        result = json.loads(str(requests.get(url,headers=headers).text))
-        #     return result
-        match_first = result['documents'][0]
-        y = match_first['y']
-        x = match_first['x']
-        adr = match_first["address_name"]
-        place_url = result["documents"][0]["place_url"]
-        center_df = pd.DataFrame({"center":[center],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[adr],"distance":[0],"link":[place_url],"X":[float(x)],"Y":[float(y)]})
-        records = records.append(center_df)
-
-        for poi in pois:
-            page = 1
-            size = 15
-            last_page = 100
-                # for query in queries:
-            while page <= last_page:
-                url = f"https://dapi.kakao.com/v2/local/search/keyword.json?y={y}&x={x}&radius={radius}&query="+poi+f"&page={page}"
-                headers = {"Authorization": kkey}
-                result1 = json.loads(str(requests.get(url,headers=headers).text))
-                page+=1
-                last_page = math.ceil(float(result1["meta"]["pageable_count"]/size))
-                for n in range(0,len(result1["documents"])):
-                    name = result1["documents"][n]["place_name"]
-        #                name=str(name).split(" ")[0]
-                    address = result1["documents"][n]["road_address_name"]
-                    distance = result1["documents"][n]["distance"]
-                    place_url = result1["documents"][n]["place_url"]
-                    x1 = result1["documents"][n]["x"]
-                    y1 = result1["documents"][n]["y"]
-                    add = pd.DataFrame({"center":[center],"poi":[poi],
-                                          "name":[name],
-                                           "address":[address],
-                                           "distance":[distance],
-                                           "link":[place_url],
-                                           "X":[float(x1)],
-                                           "Y":[float(y1)]})
-                    records=records.append(add)
-    records.reset_index(drop=True,inplace=True)
-    records["link"]=records["link"].apply(lambda x: '<a href="{0}">link</a>'.format(x))
-    return (records)
-
 #========================================================================
-
-
 @app.route("/")
 def home():
     #loading homepage = preparing database
     #for USA database
     con = create_engine("sqlite:///us_db.sqlite")
-    #upload database if no table exist(when heroku is restarted)
-    if len(con.table_names())==0:
-        rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
-        rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
-
-        sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
-        sales.to_sql("zillow_sales",con,if_exists = "replace", index=False)
-
-        city = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_code_city.csv",dtype={"zip":"str"})
-        city.to_sql("city",con,if_exists = "replace", index=False)
-
-        crime = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_crime.csv",dtype={"zip":"str"})
-        crime.to_sql("crime",con,if_exists = "replace", index=False)
-
-        area = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_area.csv",dtype={"zip":"str"})
-        area.to_sql("area",con,if_exists = "replace", index=False)
+    rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
+    rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
+    
+    sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
+    sales.to_sql("zillow_sales",con,if_exists = "replace", index=False)
+    
+    city = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_code_city.csv",dtype={"zip":"str"})
+    city.to_sql("city",con,if_exists = "replace", index=False)
+    
+    crime = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_crime.csv",dtype={"zip":"str"})
+    crime.to_sql("crime",con,if_exists = "replace", index=False)
+    
+    area = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_area.csv",dtype={"zip":"str"})
+    area.to_sql("area",con,if_exists = "replace", index=False)
     
     df=pd.DataFrame()
     df["Page"] = [
         "/",
-        "/us",
-        "/ggl",
-        "/kakao"
+        "/us"
     ]
     
     df["Content"] = [
         "Here at the home page, data is stored in temporary sqlite database",
-        "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value",
-        "Searches and plots places of interest with respect to input location as center. Google API Used",
-        "카카오 KAKAO rest API를 검색하여 관심지역을 검색, 맵핑합니다."
+        "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value"
     ]
     df["Page"] = df["Page"].apply(lambda x: '<a href="{0}">{0}</a>'.format(x))
     
@@ -390,40 +253,46 @@ def us():
         zips = list(city["zip"])
         
 #         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
-        rent = pd.read_sql("zillow_rent",con)
-        rent = zillowELT(rent,zips)
-        rent_plt = zillowplot(rent.T)
+#         rent = pd.read_sql("zillow_rent",con)
+#         rent = zillowELT(rent,zips)
+#         rent_plt = zillowplot(rent.T)
         
 #         sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
-        sales = pd.read_sql("zillow_sales",con)
-        sales = zillowELT(sales,zips)
-        sales_plt = zillowplot(rent.T)
+#         sales = pd.read_sql("zillow_sales",con)
+#         sales = zillowELT(sales,zips)
+#         sales_plt = zillowplot(rent.T)
         
-        dfs = dfs_shape_merge(rent,sales)
-        rent1 = dfs[0]
-        sales1 = dfs[1]
-        ratio = (rent1 * 12) / sales1 * 100
-        ratio_plt = zillowplot(ratio)
+    
+#         dfs = dfs_shape_merge(rent,sales)
+#         rent1 = dfs[0]
+#         sales1 = dfs[1]
+#         ratio = (rent1 * 12) / sales1 * 100
+#         ratio_plt = zillowplot(ratio)
         
         #refer to zips in both rent and sales, hence ratio
         #then append necessary data from db
-        df = pd.DataFrame(index = ratio.T.index)
+#         df = pd.DataFrame(index = ratio.T.index)
+        value = pd.read_sql("area2",con)
+        value = value[value["zip"].isin(zips)]
+        value = value[["zip","med_home_value","med_rent"]]
+        value["roi"] = value["med_rent"] * 12 / value["med_home_value"]
+        value.set_index("zip",inplace=True)
         
         #call in crime, density etc from db
         crime = pd.read_sql("crime",con)
-        crime = crime[crime["zip"].isin(list(df.index))]
+        crime = crime[crime["zip"].isin(list(value.index))]
         crime.set_index("zip",inplace=True)
         area = pd.read_sql("area",con)
-        area = area[area["zip"].isin(list(df.index))]
+        area = area[area["zip"].isin(list(value.index))]
         area.set_index("zip",inplace=True)
         
-        df = merge_dfs([df,crime,area])
+        df = merge_dfs([value,crime,area])
         
         #since heroku is limited with request time, sampling out 10 zip codes to analyze
-        sample = 10
-        if len(df) < sample:
-            sample = len(df)
-        df = df.sample(sample)
+#         sample = 10
+#         if len(df) < sample:
+#             sample = len(df)
+#         df = df.sample(sample)
         
         api = google_zip_df(df,poi)
         geo_plt = plotly_geo(api)
@@ -445,22 +314,25 @@ def us():
         
         #including rent,sales,ratio to regression formula
         #averaging last 5 results of data
-        rent_df = rent.iloc[:,-5:]
-        rent_df = pd.DataFrame(rent_df.mean(axis=1))
+#         rent_df = rent.iloc[:,-5:]
+#         rent_df = pd.DataFrame(rent_df.mean(axis=1))
+        rent_df = value["med_rent"]
         regr_rent = merge_dfs([rent_df,regr])
         regr_rent = regression(regr_rent)
         regr_rent[0].to_sql("rent0",con,if_exists="replace",index=False)
         regr_rent[1].to_sql("rent1",con,if_exists="replace",index=True)
         
-        sales_df = sales.iloc[:,-5:]
-        sales_df = pd.DataFrame(sales_df.mean(axis=1))
+#         sales_df = sales.iloc[:,-5:]
+#         sales_df = pd.DataFrame(sales_df.mean(axis=1))
+        sales_df = value["med_home_value"]
         regr_sales = merge_dfs([sales_df,regr])
         regr_sales = regression(regr_sales)
         regr_sales[0].to_sql("sales0",con,if_exists="replace",index=False)
         regr_sales[1].to_sql("sales1",con,if_exists="replace",index=True)
         
-        ratio_df = ratio.T.iloc[:,-5:]
-        ratio_df = pd.DataFrame(ratio_df.mean(axis=1))
+#         ratio_df = ratio.T.iloc[:,-5:]
+#         ratio_df = pd.DataFrame(ratio_df.mean(axis=1))
+        ratio_df = value["roi"]
         regr_ratio = merge_dfs([ratio_df,regr])
         regr_ratio = regression(regr_ratio)
         regr_ratio[0].to_sql("ratio0",con,if_exists="replace",index=False)
@@ -471,27 +343,26 @@ def us():
         df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         
         return (
-            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 10 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+
             df.to_html(escape=False)+
             "GEO PLOTTING PLACES OF INTEREST"+
             geo_plt+
 #             "RESULT OF GOOGLE GEO API SCRAPING"+
 #             api.to_html(escape=False)+
             "RENT: $/SQFT"+
-            rent_plt+
+#             rent_plt+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING RENT"+
             regr_rent[0].to_html()+
             regr_rent[1].to_html()+
             "SALES: $/SQFT"+
-            sales_plt+
+#             sales_plt+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING SALES"+
             regr_sales[0].to_html()+
             regr_sales[1].to_html()+
             "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+
-            ratio_plt+
+#             ratio_plt+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+
-            regr_ratio[0].to_html()+
-            regr_ratio[1].to_html()
+            regr_sales[0].to_html()+
+            regr_sales[1].to_html()
         )
         
         
@@ -511,8 +382,7 @@ def summary():
     
     n = pd.DataFrame().to_html()
     return(
-        "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 10 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+render_template("n.html")+    
-        "Regression analysis on rent"+render_template("n.html")+
+            "Regression analysis on rent"+render_template("n.html")+
         rent0.to_html()+rent1.to_html()+render_template("n.html")+
         "Regression analysis on sales"+render_template("n.html")+
         sales0.to_html()+sales1.to_html()+render_template("n.html")+
@@ -525,17 +395,6 @@ def summary():
         
     )
 
-@app.route("/ggl", methods=["GET", "POST"])
-def ggl():
-    if request.method == "POST":
-        center = request.form["center"]
-        center = center.split(",")
-        pois = request.form["pois"]
-        radius = request.form["radius"]
-        df = google_geo(center,pois,radius)
-        plot = plotly_geo(df)
-        return(df.to_html(escape=False)+ plot)
-    return render_template("form_ggl.html")
 
 @app.route("/kakao", methods=["GET", "POST"])
 def kakao():
@@ -549,7 +408,17 @@ def kakao():
         return(df.to_html(escape=False)+ plot)
     return render_template("form_kakao.html")
 
-
+@app.route("/ggl", methods=["GET", "POST"])
+def ggl():
+    if request.method == "POST":
+        center = request.form["center"]
+        center = center.split(",")
+        pois = request.form["pois"]
+        radius = request.form["radius"]
+        df = google_geo(center,pois,radius)
+        plot = plotly_geo(df)
+        return(df.to_html(escape=False)+ plot)
+    return render_template("form_ggl.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
