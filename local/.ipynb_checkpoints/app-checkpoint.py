@@ -328,30 +328,36 @@ def home():
     #loading homepage = preparing database
     #for USA database
     con = create_engine("sqlite:///us_db.sqlite")
-    rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
-    rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
-    
-    sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
-    sales.to_sql("zillow_sales",con,if_exists = "replace", index=False)
-    
-    city = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_code_city.csv",dtype={"zip":"str"})
-    city.to_sql("city",con,if_exists = "replace", index=False)
-    
-    crime = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_crime.csv",dtype={"zip":"str"})
-    crime.to_sql("crime",con,if_exists = "replace", index=False)
-    
-    area = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_area.csv",dtype={"zip":"str"})
-    area.to_sql("area",con,if_exists = "replace", index=False)
+    #upload database if no table exist(when heroku is restarted)
+    if len(con.table_names())==0:
+        rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
+        rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
+
+        sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
+        sales.to_sql("zillow_sales",con,if_exists = "replace", index=False)
+
+        city = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_code_city.csv",dtype={"zip":"str"})
+        city.to_sql("city",con,if_exists = "replace", index=False)
+
+        crime = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_crime.csv",dtype={"zip":"str"})
+        crime.to_sql("crime",con,if_exists = "replace", index=False)
+
+        area = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_area.csv",dtype={"zip":"str"})
+        area.to_sql("area",con,if_exists = "replace", index=False)
     
     df=pd.DataFrame()
     df["Page"] = [
         "/",
-        "/us"
+        "/us",
+        "/ggl",
+        "/kakao"
     ]
     
     df["Content"] = [
         "Here at the home page, data is stored in temporary sqlite database",
-        "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value"
+        "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value",
+        "Searches and plots places of interest with respect to input location as center. Google API Used",
+        "카카오 KAKAO rest API를 검색하여 관심지역을 검색, 맵핑합니다."
     ]
     df["Page"] = df["Page"].apply(lambda x: '<a href="{0}">{0}</a>'.format(x))
     
