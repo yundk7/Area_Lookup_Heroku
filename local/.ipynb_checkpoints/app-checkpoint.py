@@ -296,21 +296,21 @@ def us():
         regr_rent = merge_dfs([rent_df,regr])
         regr_rent = regression(regr_rent)
         regr_rent[0].to_sql("rent0",con,if_exists="replace",index=False)
-        regr_rent[1].to_sql("rent1",con,if_exists="replace",index=False)
+        regr_rent[1].to_sql("rent1",con,if_exists="replace",index=True)
         
         sales_df = sales.iloc[:,-5:]
         sales_df = pd.DataFrame(sales_df.mean(axis=1))
         regr_sales = merge_dfs([sales_df,regr])
         regr_sales = regression(regr_sales)
         regr_sales[0].to_sql("sales0",con,if_exists="replace",index=False)
-        regr_sales[1].to_sql("sales1",con,if_exists="replace",index=False)
+        regr_sales[1].to_sql("sales1",con,if_exists="replace",index=True)
         
         ratio_df = ratio.T.iloc[:,-5:]
         ratio_df = pd.DataFrame(ratio_df.mean(axis=1))
         regr_ratio = merge_dfs([ratio_df,regr])
         regr_ratio = regression(regr_ratio)
         regr_ratio[0].to_sql("ratio0",con,if_exists="replace",index=False)
-        regr_ratio[1].to_sql("ratio1",con,if_exists="replace",index=False)
+        regr_ratio[1].to_sql("ratio1",con,if_exists="replace",index=True)
         
         #clickable link to summary
         df = pd.DataFrame({"SUMMARY":["/summary"]})
