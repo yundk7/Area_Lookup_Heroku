@@ -14,8 +14,8 @@ import plotly.express as px
 py.offline.init_notebook_mode(connected = True)
 
 import requests
-# import json
-# import math
+import json
+import math
 # from bs4 import BeautifulSoup as bs
 # import re
 from sqlalchemy import create_engine
@@ -178,6 +178,8 @@ def plotly_geo(df):
     df["size"] = 10
     df.loc[df['poi'] == "YOU ARE HERE", 'size'] = 20
     df.loc[df['poi'] == "YOU ARE HERE", 'reviews'] = 0
+    df["reviews"].fillna(0,inplace=True)
+    
     px.set_mapbox_access_token("pk.eyJ1IjoidGl2bWU3IiwiYSI6ImNrMWEwZDVtNDI4Zm4zYm1vY3o3Z25zejEifQ._yTPkj3nXTzor72zIevLCQ")
     hover = ["reviews"]
 #     if hover in (df.columns):
@@ -269,6 +271,55 @@ def google_geo(srch_list,pois,radius):
     records = records[["center","poi","name","score","reviews","price","price","link","address","X","Y"]]
     records["link"]=records["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
     return(records)
+
+def kakao_api(centers_inp,pois_inp,radius):
+    centers = centers_inp.split(",")
+    pois = pois_inp.split(",")
+    records = pd.DataFrame()
+    for center in centers:
+        url = 'https://dapi.kakao.com/v2/local/search/keyword.json?query='+center
+        headers = {"Authorization": "KakaoAK 8809fcb48aa9900788adbd9f162c6b25"}
+        result = json.loads(str(requests.get(url,headers=headers).text))
+        #     return result
+        match_first = result['documents'][0]
+        y = match_first['y']
+        x = match_first['x']
+        adr = match_first["address_name"]
+        place_url = result["documents"][0]["place_url"]
+        center_df = pd.DataFrame({"center":[center],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[adr],"distance":[0],"link":[place_url],"X":[float(x)],"Y":[float(y)]})
+        records = records.append(center_df)
+
+        for poi in pois:
+            page = 1
+            size = 15
+            last_page = 100
+                # for query in queries:
+            while page <= last_page:
+                url = f"https://dapi.kakao.com/v2/local/search/keyword.json?y={y}&x={x}&radius={radius}&query="+poi+f"&page={page}"
+                headers = {"Authorization": "KakaoAK 8809fcb48aa9900788adbd9f162c6b25"}
+                result1 = json.loads(str(requests.get(url,headers=headers).text))
+                page+=1
+                last_page = math.ceil(float(result1["meta"]["pageable_count"]/size))
+                for n in range(0,len(result1["documents"])):
+                    name = result1["documents"][n]["place_name"]
+        #                name=str(name).split(" ")[0]
+                    address = result1["documents"][n]["road_address_name"]
+                    distance = result1["documents"][n]["distance"]
+                    place_url = result1["documents"][n]["place_url"]
+                    x1 = result1["documents"][n]["x"]
+                    y1 = result1["documents"][n]["y"]
+                    add = pd.DataFrame({"center":[center],"poi":[poi],
+                                          "name":[name],
+                                           "address":[address],
+                                           "distance":[distance],
+                                           "link":[place_url],
+                                           "X":[float(x1)],
+                                           "Y":[float(y1)]})
+                    records=records.append(add)
+    records.reset_index(drop=True,inplace=True)
+    records["link"]=records["link"].apply(lambda x: '<a href="{0}">link</a>'.format(x))
+    return (records)
+
 #========================================================================
 
 
@@ -460,6 +511,17 @@ def summary():
         
     )
 
+@app.route("/ggl", methods=["GET", "POST"])
+def ggl():
+    if request.method == "POST":
+        center = request.form["center"]
+        center = center.split(",")
+        pois = request.form["pois"]
+        radius = request.form["radius"]
+        df = google_geo(center,pois,radius)
+        plot = plotly_geo(df)
+        return(df.to_html(escape=False)+ plot)
+    return render_template("form_ggl.html")
 
 @app.route("/kakao", methods=["GET", "POST"])
 def kakao():
@@ -473,17 +535,7 @@ def kakao():
         return(df.to_html(escape=False)+ plot)
     return render_template("form_kakao.html")
 
-@app.route("/ggl", methods=["GET", "POST"])
-def ggl():
-    if request.method == "POST":
-        center = request.form["center"]
-        center = center.split(",")
-        pois = request.form["pois"]
-        radius = request.form["radius"]
-        df = google_geo(center,pois,radius)
-        plot = plotly_geo(df)
-        return(df.to_html(escape=False)+ plot)
-    return render_template("form_ggl.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
