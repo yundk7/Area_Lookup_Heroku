@@ -188,6 +188,87 @@ def plotly_geo(df):
     fig.update_layout(autosize=True,width=1500,height=750)
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
+
+def google_geo(srch_list,pois,radius):
+    records = pd.DataFrame()
+    gkey = "AIzaSyA-Rjp6nOeJp6815Xt1Kkuxc5XKMiKl_yA"
+#     srch_list = ["91765","60607"]
+    # srch_list = ["walnut high school","235 west van buren"]
+#     pois = "restaurants,subway station"
+#     radius = 15000
+    pois = pois.split(",")
+    for s in srch_list:
+        target_url = (f'https://maps.googleapis.com/maps/api/geocode/json?address={s}&key={gkey}')
+        geo_data = requests.get(target_url).json()
+        target_adr = geo_data["results"][0]["formatted_address"]
+        lat = geo_data["results"][0]["geometry"]["location"]["lat"]
+        lng = geo_data["results"][0]["geometry"]["location"]["lng"]
+        target_coordinates = str(lat) + "," + str(lng)
+        link = geo_data["results"][0]["place_id"]
+        center_df = pd.DataFrame({"center":[s],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[target_adr],"link":[link],"Y":[float(lat)],"X":[float(lng)]})
+        records = records.append(center_df)
+        for poi in pois:
+            params = {
+                "location": target_coordinates,
+                "keyword": poi,
+                "radius": radius,
+            #     "type": target_type,
+                "key": gkey
+            }
+
+            # base url
+            base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+
+            # run a request using our params dictionary
+            response = requests.get(base_url, params=params)
+            places_data = response.json()
+            n=0
+            # while int(n) > len(places_data):
+            while int(n) < len(places_data["results"]):
+                try:
+                    price=places_data["results"][int(n)]["price_level"]
+                except KeyError:
+                    price = "NA"
+                try:
+                    link=places_data["results"][int(n)]["place_id"]
+                except KeyError:
+                    link = "NA"
+                try:
+                    score = places_data["results"][int(n)]["rating"]
+                except KeyError:
+                    score = "NA"
+                try:
+                    reviews = int(places_data["results"][int(n)]["user_ratings_total"])
+                except KeyError:
+                    reviews = "NA"
+                try:
+                    lat1 = places_data["results"][int(n)]["geometry"]["location"]["lat"]
+                except KeyError:
+                    lat1 = "NA"
+                try:
+                    lng1 = places_data["results"][int(n)]["geometry"]["location"]["lng"]
+                except KeyError:
+                    lng1 = "NA"
+                content = pd.DataFrame ({"center":target_adr,"poi":poi,
+                                    "name":[places_data["results"][int(n)]["name"]],
+                                    "score":score,
+                                     "reviews":reviews,
+                                     "price":price,
+                                     "link":link,
+                                    "address":[places_data["results"][int(n)]["vicinity"]],
+                                         "Y":[lat1],
+                                         "X":[lng1]
+            #                        "distance":distance,
+            #                         "drive":duration,
+            #                         "public":transit_dur,
+            #                         "walk":walk_dur
+                                        })
+                records = records.append(content)
+                n+=1
+    records.reset_index(drop = True,inplace = True)
+    records = records[["center","poi","name","score","reviews","price","price","link","address","X","Y"]]
+    records["link"]=records["link"].apply(lambda x: '<a href="https://www.google.com/maps/place/?q=place_id:{0}">link</a>'.format(x))
+    return(records)
 #========================================================================
 
 
