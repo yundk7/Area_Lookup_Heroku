@@ -189,10 +189,42 @@ def plotly_geo(df):
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
 #========================================================================
-
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def home():
+    #loading homepage = preparing database
+    #for USA database
+    con = create_engine("sqlite:///us_db.sqlite")
+    rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
+    rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
+    
+    sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
+    sales.to_sql("zillow_sales",con,if_exists = "replace", index=False)
+    
+    city = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_code_city.csv",dtype={"zip":"str"})
+    city.to_sql("city",con,if_exists = "replace", index=False)
+    
+    crime = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_crime.csv",dtype={"zip":"str"})
+    crime.to_sql("crime",con,if_exists = "replace", index=False)
+    
+    area = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/zip_area.csv",dtype={"zip":"str"})
+    area.to_sql("area",con,if_exists = "replace", index=False)
+    
+    df=pd.DataFrame()
+    df["Page"] = [
+        "/",
+        "/us"
+    ]
+    
+    df["Content"] = [
+        "Here at the home page, data is stored in temporary sqlite database",
+        "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value"
+    ]
+    df["Page"] = df["Page"].apply(lambda x: '<a href="{0}">{0}</a>'.format(x))
+    
+    return(df.to_html(escape=False))
+
+@app.route("/us", methods=["GET", "POST"])
+def us():
     if request.method == "POST":
         typ = request.form["typ"]
         srch = request.form["srch"]
@@ -203,17 +235,19 @@ def home():
         poi = poi.upper()
         
         #call in information to find what zipcodes are in search area(eg:chicago)
-        con = create_engine("sqlite:///zip_data0.sqlite")
+        con = create_engine("sqlite:///us_db.sqlite")
         city = pd.read_sql("city",con)
         city = city[city[typ].astype(str).str.replace(" ","").str.upper().isin(srch)]
         #from zip codes obtained, select information needed from each database
         zips = list(city["zip"])
         
-        rent = pd.read_csv("Zip_ZriPerSqft_AllHomes.csv")
+#         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
+        rent = pd.read_sql("zillow_rent",con)
         rent = zillowELT(rent,zips)
         rent_plt = zillowplot(rent.T)
         
-        sales = pd.read_csv("Zip_MedianListingPricePerSqft_AllHomes.csv")
+#         sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
+        sales = pd.read_sql("zillow_sales",con)
         sales = zillowELT(sales,zips)
         sales_plt = zillowplot(rent.T)
         
@@ -306,7 +340,7 @@ def home():
         )
         
         
-    return render_template("form.html")
+    return render_template("us.html")
 
 @app.route("/summary")
 def summary():
