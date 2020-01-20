@@ -6,6 +6,7 @@ from flask import (
 from IPython.display import HTML
 import numpy as np
 import pandas as pd
+import datetime as dt
 pd.set_option('display.max_colwidth', -1)
 
 import plotly as py
@@ -45,6 +46,7 @@ def zillowELT(df,zips_list):
     cut = list(df.columns).index("SizeRank")+1
     df = df.iloc[:,cut:]
     df.columns = pd.to_datetime(df.columns,format = "%b-%y",errors = "coerce")
+    df.columns = pd.DataFrame(df.columns)[0].dt.strftime("%Y-%m")
     return(df)
 
 def zillowplot(df):
@@ -420,7 +422,7 @@ def us():
         df = merge_dfs([df,crime,area])
         
         #since heroku is limited with request time, sampling out 10 zip codes to analyze
-        sample = 10
+        sample = 7
         if len(df) < sample:
             sample = len(df)
         df = df.sample(sample)
@@ -471,7 +473,7 @@ def us():
         df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         
         return (
-            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 10 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+
+            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 7 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+
             df.to_html(escape=False)+
             "GEO PLOTTING PLACES OF INTEREST"+
             geo_plt+
@@ -532,6 +534,7 @@ def ggl():
         center = center.split(",")
         pois = request.form["pois"]
         radius = request.form["radius"]
+        radius = radius * 1600
         df = google_geo(center,pois,radius)
         plot = plotly_geo(df)
         return(df.to_html(escape=False)+ plot)
@@ -548,7 +551,6 @@ def kakao():
         
         return(df.to_html(escape=False)+ plot)
     return render_template("form_kakao.html")
-
 
 
 if __name__ == "__main__":

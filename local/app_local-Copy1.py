@@ -286,7 +286,7 @@ def us():
         area = area[area["zip"].isin(list(value.index))]
         area.set_index("zip",inplace=True)
         
-        df = merge_dfs([value,crime,area])
+        df = merge_dfs([crime,area])
         
         #since heroku is limited with request time, sampling out 10 zip codes to analyze
 #         sample = 10
@@ -361,8 +361,8 @@ def us():
             "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+
 #             ratio_plt+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+
-            regr_sales[0].to_html()+
-            regr_sales[1].to_html()
+            regr_ratio[0].to_html()+
+            regr_ratio[1].to_html()
         )
         
         
