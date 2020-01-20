@@ -464,7 +464,7 @@ def us():
         ratio_df = ratio.T.iloc[:,-5:]
         ratio_df = pd.DataFrame(ratio_df.mean(axis=1))
         regr_ratio = merge_dfs([ratio_df,regr])
-        regr_ratio = regression(regr_ratio)
+        regr_ratio = regression(regr_ratio)        
         regr_ratio[0].to_sql("ratio0",con,if_exists="replace",index=False)
         regr_ratio[1].to_sql("ratio1",con,if_exists="replace",index=True)
         
@@ -473,26 +473,26 @@ def us():
         df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         
         return (
-            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 7 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+
-            df.to_html(escape=False)+
-            "GEO PLOTTING PLACES OF INTEREST"+
-            geo_plt+
+            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 8 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+ render_template("n.html")+
+            df.to_html(escape=False)+ render_template("n.html")+
+            "GEO PLOTTING PLACES OF INTEREST"+ render_template("n.html")+
+            geo_plt+ render_template("n.html")+
 #             "RESULT OF GOOGLE GEO API SCRAPING"+
 #             api.to_html(escape=False)+
-            "RENT: $/SQFT"+
-            rent_plt+
-            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING RENT"+
-            regr_rent[0].to_html()+
-            regr_rent[1].to_html()+
-            "SALES: $/SQFT"+
-            sales_plt+
-            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING SALES"+
-            regr_sales[0].to_html()+
-            regr_sales[1].to_html()+
-            "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+
-            ratio_plt+
-            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+
-            regr_ratio[0].to_html()+
+            "RENT: $/SQFT"+ render_template("n.html")+
+            rent_plt+ render_template("n.html")+
+            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING RENT"+ render_template("n.html")+
+            regr_rent[0].to_html()+ render_template("n.html")+
+            regr_rent[1].to_html()+ render_template("n.html")+
+            "SALES: $/SQFT"+ render_template("n.html")+
+            sales_plt+ render_template("n.html")+
+            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING SALES"+ render_template("n.html")+
+            regr_sales[0].to_html()+ render_template("n.html")+
+            regr_sales[1].to_html()+ render_template("n.html")+
+            "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+ render_template("n.html")+
+            ratio_plt+ render_template("n.html")+
+            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+ render_template("n.html")+
+            regr_ratio[0].to_html()+ render_template("n.html")+
             regr_ratio[1].to_html()
         )
         
@@ -513,7 +513,7 @@ def summary():
     
     n = pd.DataFrame().to_html()
     return(
-        "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 10 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+render_template("n.html")+    
+        "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 7 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+render_template("n.html")+    
         "Regression analysis on rent"+render_template("n.html")+
         rent0.to_html()+rent1.to_html()+render_template("n.html")+
         "Regression analysis on sales"+render_template("n.html")+
@@ -534,7 +534,7 @@ def ggl():
         center = center.split(",")
         pois = request.form["pois"]
         radius = request.form["radius"]
-        radius = radius * 1600
+        radius = float(radius) * 1600
         df = google_geo(center,pois,radius)
         plot = plotly_geo(df)
         return(df.to_html(escape=False)+ plot)
