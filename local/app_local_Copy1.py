@@ -356,7 +356,7 @@ def us_local():
         ratio[1].to_sql("ratio1",con_sum,if_exists="replace",index=True)
         
         #clickable link to summary
-        df = pd.DataFrame({"SUMMARY":[f"/demo_summary"]})
+        df = pd.DataFrame({"SUMMARY":["/demo_summary"]})
         df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         
         
