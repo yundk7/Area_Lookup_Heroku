@@ -561,10 +561,10 @@ def summary():
         sales0.to_html()+sales1.to_html()+render_template("n.html")+
         "Regression analysis on ROI"+render_template("n.html")+
         ratio0.to_html()+ratio1.to_html()+render_template("n.html")+
-        "Google API results"+render_template("n.html")+
-        api.to_html(escape=False)+render_template("n.html")+
         "Pivot table of crime rates, population density, count and mean of POIS"+render_template("n.html")+
-        regr.to_html()
+        regr.to_html()+render_template("n.html")+
+        "Google API results"+render_template("n.html")+
+        api.to_html(escape=False)
         
     )
 
