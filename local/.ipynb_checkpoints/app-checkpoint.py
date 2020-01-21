@@ -577,10 +577,15 @@ def demo():
         con = create_engine("sqlite:///input.sqlite")
         inp = pd.DataFrame([name])
         inp.to_sql("input",con,if_exists="replace",index=False)
+        
+        df = pd.DataFrame({"SUMMARY":["/demo_summary"]})
+        df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         return(
+            df.to_html(escape=(False))+ render_template("n.html")+
             "GEO plot of place of interests:" + render_template("n.html")+
             render_template(f"demo/{name}.html") + render_template("n.html")+
-            render_template(f"demo/{name}_demo.html")
+            render_template(f"demo/{name}_demo.html")+ render_template("n.html")+
+            df.to_html(escape=(False))
 
         )
     return render_template("demo.html")
