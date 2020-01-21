@@ -65,9 +65,9 @@ def dfs_shape_merge(df1,df2):
     #to get ratio, first put rent and sales dataframe into same size with matching index and columns
     #.T to transpose
     df1_T = df1[df1.index.isin(list(df2.index))].T
-    df1_T = df1_T[df1_T.index.isin(list(df2.T.index))]
+    df1_T = df1_T[df1_T.index.isin(list(df2.T.index))].T
     df2_T = df2[df2.index.isin(list(df1.index))].T
-    df2_T = df2_T[df2_T.index.isin(list(df1.T.index))]
+    df2_T = df2_T[df2_T.index.isin(list(df1.T.index))].T
     return([df1_T,df2_T])
 
 #will merge dfs respect to index values
@@ -77,6 +77,15 @@ def merge_dfs(df_list):
             df = df_list[0]
         else:
             df = pd.merge(df,df_list[n],left_index=True,right_index=True)
+    return(df)
+
+#will merge outer
+def merge_dfs_out(df_list):
+    for n in range(0,len(df_list)):
+        if n == 0:
+            df = df_list[0]
+        else:
+            df = pd.merge(df,df_list[n],left_index=True,right_index=True,how="outer")
     return(df)
 
 def regression(df):
@@ -379,121 +388,148 @@ def us():
         typ = request.form["typ"]
         srch = request.form["srch"]
         poi = request.form["pois"]
+        
+        con_search = create_engine("sqlite:///search.sqlite")
+        df = pd.DataFrame({"Title":["Type","Search","Place of Interests"],"Input":[typ,srch,poi]})
+        df.to_sql("search", con_search, if_exists="replace", index=False)
+
         typ = typ.lower()
         #to take account typing differences such as space and capital letters
         srch = srch.upper().replace(" ","").split(",")
         poi = poi.upper()
-        
+
         #call in information to find what zipcodes are in search area(eg:chicago)
-        con = create_engine("sqlite:///us_db.sqlite")
-        city = pd.read_sql("city",con)
+        con_us = create_engine("sqlite:///us_db.sqlite")
+        city = pd.read_sql("city",con_us)
         city = city[city[typ].astype(str).str.replace(" ","").str.upper().isin(srch)]
         #from zip codes obtained, select information needed from each database
         zips = list(city["zip"])
-        
-#         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
-        rent = pd.read_sql("zillow_rent",con)
+
+        #         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
+        rent = pd.read_sql("zillow_rent",con_us)
         rent = zillowELT(rent,zips)
         rent_plt = zillowplot(rent.T)
-        
-#         sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
-        sales = pd.read_sql("zillow_sales",con)
+
+        #         sales = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_MedianListingPricePerSqft_AllHomes.csv")
+        sales = pd.read_sql("zillow_sales",con_us)
         sales = zillowELT(sales,zips)
-        sales_plt = zillowplot(rent.T)
-        
+        sales_plt = zillowplot(sales.T)
+
         dfs = dfs_shape_merge(rent,sales)
         rent1 = dfs[0]
         sales1 = dfs[1]
         ratio = (rent1 * 12) / sales1 * 100
-        ratio_plt = zillowplot(ratio)
+        ratio_plt = zillowplot(ratio.T)
+
+        if poi == "":
+            return(
+                    df.to_html()+render_template("n.html")+
+                    "RENT: $/SQFT"+render_template("n.html")+
+                    rent_plt+render_template("n.html")+
+                    "SALES: $/SQFT"+render_template("n.html")+
+                    sales_plt+render_template("n.html")+
+                    "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+render_template("n.html")+
+                    ratio_plt
+                )
         
-        #refer to zips in both rent and sales, hence ratio
-        #then append necessary data from db
-        df = pd.DataFrame(index = ratio.T.index)
+        # getting recent 5 for regression later
+        n = -5
+        rent = rent.iloc[:,n:]
+        rent = pd.DataFrame({"rent":rent.mean(axis=1)})
+
+        sales = sales.iloc[:,n:]
+        sales = pd.DataFrame({"sales":sales.mean(axis=1)})
+
+        ratio = ratio.iloc[:,n:]
+        ratio = pd.DataFrame({"roi":ratio.mean(axis=1)})
+
+        # now the zips are outer merge of zips in rent and sales
+        zip_rent = pd.DataFrame(rent.index.values)
+        zip_sales = pd.DataFrame(sales.index.values)
+        zips = list(pd.merge(zip_rent,zip_sales,on=0,how="outer")[0])
+
+        #preparing dataframe for regression with zipcode data, also to be used in google api search
+        area = pd.read_sql("area",con_us)
+        area = area[area["zip"].isin(zips)]
+        crime = pd.read_sql("crime",con_us)
+
+        regr = pd.merge(area,crime,on="zip")
+        regr.set_index("zip",inplace=True)
+        regr = merge_dfs_out([rent,sales,ratio,regr])
         
-        #call in crime, density etc from db
-        crime = pd.read_sql("crime",con)
-        crime = crime[crime["zip"].isin(list(df.index))]
-        crime.set_index("zip",inplace=True)
-        area = pd.read_sql("area",con)
-        area = area[area["zip"].isin(list(df.index))]
-        area.set_index("zip",inplace=True)
-        
-        df = merge_dfs([df,crime,area])
-        
-        #since heroku is limited with request time, sampling out 10 zip codes to analyze
-        sample = 7
-        if len(df) < sample:
-            sample = len(df)
-        df = df.sample(sample)
-        
-        api = google_zip_df(df,poi)
+        #since heroku is limited with request time, sampling out 8 zip codes to analyze
+        sample = 8
+        if len(regr) < sample:
+            sample = len(regr)
+        regr = regr.sample(sample)
+
+        #using regression dataframe for reference
+        api = google_zip_df(regr,poi)
         geo_plt = plotly_geo(api)
-        
+#         plotly_geo(api)
+        con_sum = create_engine("sqlite:///summary.sqlite")
+        api.to_sql("api",con_sum,if_exists="replace",index=False)
+
+        #preparing api results for regression
         API_df = api[api["poi"]!="YOU ARE HERE"]
         API_df[["reviews"]]=API_df[["reviews"]].apply(pd.to_numeric, errors='coerce')
-        count_df = API_df.pivot_table(fill_value=0,index = "zip",columns = ["poi"], values="reviews",aggfunc=["mean","count"])["count"].reset_index()
-        mean_df = API_df.pivot_table(fill_value=0,index = "zip",columns = ["poi"], values="reviews",aggfunc=["mean","sum"])["mean"].reset_index()
+        count_df = API_df.pivot_table(fill_value=0,index = "zip",columns = ["poi"], values="reviews",aggfunc=["count"])["count"].reset_index()
+        mean_df = API_df.pivot_table(fill_value=0,index = "zip",columns = ["poi"], values="reviews",aggfunc=["mean"])["mean"].reset_index()
         API_pivot = pd.merge(count_df,mean_df,on="zip",suffixes=["_count","_mean"])
         API_pivot.set_index("zip",inplace=True)
-        regr = merge_dfs([df,API_pivot])
-        #dropping unnecessary columns
+
+        regr = merge_dfs([regr,API_pivot])
+
         regr.drop(columns = ["coordinates","area","radius"],inplace=True)
+        #saving pivot table in database for summary display
+        regr.to_sql("regression",con_sum,if_exists="replace")
         
-        #preparing sqlite for temporarily stored dataframes
-        con = create_engine("sqlite:///summary.sqlite")
-        api.to_sql("api",con,if_exists="replace",index=False)
-        regr.to_sql("pivot",con,if_exists="replace")
-        
-        #including rent,sales,ratio to regression formula
-        #averaging last 5 results of data
-        rent_df = rent.iloc[:,-5:]
-        rent_df = pd.DataFrame(rent_df.mean(axis=1))
-        regr_rent = merge_dfs([rent_df,regr])
-        regr_rent = regression(regr_rent)
-        regr_rent[0].to_sql("rent0",con,if_exists="replace",index=False)
-        regr_rent[1].to_sql("rent1",con,if_exists="replace",index=True)
-        
-        sales_df = sales.iloc[:,-5:]
-        sales_df = pd.DataFrame(sales_df.mean(axis=1))
-        regr_sales = merge_dfs([sales_df,regr])
-        regr_sales = regression(regr_sales)
-        regr_sales[0].to_sql("sales0",con,if_exists="replace",index=False)
-        regr_sales[1].to_sql("sales1",con,if_exists="replace",index=True)
-        
-        ratio_df = ratio.T.iloc[:,-5:]
-        ratio_df = pd.DataFrame(ratio_df.mean(axis=1))
-        regr_ratio = merge_dfs([ratio_df,regr])
-        regr_ratio = regression(regr_ratio)        
-        regr_ratio[0].to_sql("ratio0",con,if_exists="replace",index=False)
-        regr_ratio[1].to_sql("ratio1",con,if_exists="replace",index=True)
+        #regression on each
+        rent = regr.drop(columns=["sales","roi"]).dropna()
+        rent = regression(rent)
+        rent[0].to_sql("rent0",con_sum,if_exists="replace",index=False)
+        rent[1].to_sql("rent1",con_sum,if_exists="replace",index=True)
+
+        sales = regr.drop(columns=["rent","roi"]).dropna()
+        sales = regression(sales)
+        sales[0].to_sql("sales0",con_sum,if_exists="replace",index=False)
+        sales[1].to_sql("sales1",con_sum,if_exists="replace",index=True)
+
+        ratio = regr.drop(columns=["rent","sales"]).dropna()
+        ratio = regression(ratio)
+        ratio[0].to_sql("ratio0",con_sum,if_exists="replace",index=False)
+        ratio[1].to_sql("ratio1",con_sum,if_exists="replace",index=True)
         
         #clickable link to summary
-        df = pd.DataFrame({"SUMMARY":["/summary"]})
+        df = pd.DataFrame({"SUMMARY":[f"/summary"]})
         df["SUMMARY"] = df["SUMMARY"].apply(lambda x: '<a href="{0}">Click to view table only summary(For saving)</a>'.format(x))
         
+        
+        search = pd.read_sql("search",con_search)
+        
         return (
-            "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 8 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+ render_template("n.html")+
-            df.to_html(escape=False)+ render_template("n.html")+
-            "GEO PLOTTING PLACES OF INTEREST"+ render_template("n.html")+
+            "NOTE THAT DUE TO RUNTIME LIMIT ON HEROKU, SEARCH IS DONE FOR 8 SAMPLED ZIPCODES"+render_template("n.html")+
+            df.to_html(escape=False)+render_template("n.html")+
+            "SHOWING RESULTS FOR INPUT:" +render_template("n.html")+
+            search.to_html()+render_template("n.html")+ render_template("n.html")+
+            "GEO PLOTTING PLACES OF INTEREST"+render_template("n.html")+
             geo_plt+ render_template("n.html")+
-#             "RESULT OF GOOGLE GEO API SCRAPING"+
-#             api.to_html(escape=False)+
-            "RENT: $/SQFT"+ render_template("n.html")+
-            rent_plt+ render_template("n.html")+
-            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING RENT"+ render_template("n.html")+
-            regr_rent[0].to_html()+ render_template("n.html")+
-            regr_rent[1].to_html()+ render_template("n.html")+
-            "SALES: $/SQFT"+ render_template("n.html")+
-            sales_plt+ render_template("n.html")+
-            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING SALES"+ render_template("n.html")+
-            regr_sales[0].to_html()+ render_template("n.html")+
-            regr_sales[1].to_html()+ render_template("n.html")+
-            "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+ render_template("n.html")+
-            ratio_plt+ render_template("n.html")+
-            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+ render_template("n.html")+
-            regr_ratio[0].to_html()+ render_template("n.html")+
-            regr_ratio[1].to_html()
+            "RENT: $/SQFT"+render_template("n.html")+
+            rent_plt+render_template("n.html")+
+            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING RENT"+render_template("n.html")+
+            rent[0].to_html()+render_template("n.html")+
+            rent[1].to_html()+render_template("n.html")+
+            "SALES: $/SQFT"+render_template("n.html")+
+            sales_plt+render_template("n.html")+
+            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING SALES"+render_template("n.html")+
+            sales[0].to_html()+render_template("n.html")+
+            sales[1].to_html()+render_template("n.html")+
+            "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+render_template("n.html")+
+            ratio_plt+render_template("n.html")+
+            "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+render_template("n.html")+
+            ratio[0].to_html()+render_template("n.html")+
+            ratio[1].to_html()+render_template("n.html")+
+            df.to_html(escape=False)
         )
         
         
@@ -509,11 +545,16 @@ def summary():
     ratio0 = pd.read_sql("ratio0",con)
     ratio1 = pd.read_sql("ratio1",con)
     api = pd.read_sql("api",con)
-    pivot = pd.read_sql("pivot",con)
+    regr = pd.read_sql("regression",con)
     
-    n = pd.DataFrame().to_html()
+    con = create_engine("sqlite:///search.sqlite")
+    search = pd.read_sql("search",con)
+    
+#     n = pd.DataFrame().to_html()
     return(
-        "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 7 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+render_template("n.html")+    
+        "PLEASE NOTE THAT DUE TO REQUEST TIME LIMIT ONLINE, UP TO 8 ZIP CODES WERE SAMPLED FOR ANALYSIS!"+render_template("n.html")+
+        "Result for:"+render_template("n.html")+
+        search.to_html()+render_template("n.html")+
         "Regression analysis on rent"+render_template("n.html")+
         rent0.to_html()+rent1.to_html()+render_template("n.html")+
         "Regression analysis on sales"+render_template("n.html")+
@@ -523,9 +564,34 @@ def summary():
         "Google API results"+render_template("n.html")+
         api.to_html(escape=False)+render_template("n.html")+
         "Pivot table of crime rates, population density, count and mean of POIS"+render_template("n.html")+
-        pivot.to_html()
+        regr.to_html()
         
     )
+
+@app.route("/demo", methods=["GET", "POST"])
+def demo():
+    if request.method == "POST":
+        name = request.form["city"]
+        name = name.lower()
+        name = name.replace(" ","_")
+        con = create_engine("sqlite:///input.sqlite")
+        inp = pd.DataFrame([name])
+        inp.to_sql("input",con,if_exists="replace",index=False)
+        return(
+            "GEO plot of place of interests:" + render_template("n.html")+
+            render_template(f"demo/{name}.html") + render_template("n.html")+
+            render_template(f"demo/{name}_demo.html")
+
+        )
+    return render_template("demo.html")
+
+@app.route("/demo_summary")
+def check():
+    con = create_engine("sqlite:///input.sqlite")
+    inp = pd.read_sql("input",con).values[0][0]
+    
+    return render_template(f"demo/{inp}_summary.html")
+
 
 @app.route("/ggl", methods=["GET", "POST"])
 def ggl():
