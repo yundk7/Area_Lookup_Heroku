@@ -123,7 +123,7 @@ def google_zip_df(df,pois):
         lat = center_coordinates.split(",")[0]
         lng = center_coordinates.split(",")[1]
         radius = df.radius[n]*1600
-        center_df = pd.DataFrame({"zip":[center_zip],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[f"zip:{center_zip}"],"Y":[float(lat)],"X":[float(lng)]})
+        center_df = pd.DataFrame({"zip":[center_zip],"poi":["YOU ARE HERE"],"name":[center_zip],"address":[f"zip:{center_zip}"],"Y":[float(lat)],"X":[float(lng)]})
         records = records.append(center_df)
         
         #get radius of each zip
@@ -350,9 +350,9 @@ def us_local():
         # if len(df) < sample:
         #     sample = len(df)
         # df = df.sample(sample)
-
+        
         #using regression dataframe for reference
-        api = google_zip_df(regr,poi)
+        api = google_zip_df(regr[["coordinates","radius"]].dropna(),poi)
         # geo_plt = plotly_geo(api)
         plotly_geo(api,name)
         con_sum = create_engine("sqlite:///summary.sqlite")

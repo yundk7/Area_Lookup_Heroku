@@ -125,7 +125,7 @@ def google_zip_df(df,pois):
         lat = center_coordinates.split(",")[0]
         lng = center_coordinates.split(",")[1]
         radius = df.radius[n]*1600
-        center_df = pd.DataFrame({"zip":[center_zip],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[f"zip:{center_zip}"],"Y":[float(lat)],"X":[float(lng)]})
+        center_df = pd.DataFrame({"zip":[center_zip],"poi":["YOU ARE HERE"],"name":[center_zip],"address":[f"zip:{center_zip}"],"Y":[float(lat)],"X":[float(lng)]})
         records = records.append(center_df)
         
         #get radius of each zip
@@ -402,6 +402,7 @@ def home():
     df["Page"] = [
         "/",
         "/us",
+        "/demo"
         "/ggl",
         "/kakao"
     ]
@@ -409,6 +410,7 @@ def home():
     df["Content"] = [
         "Here at the home page, data is stored in temporary sqlite database",
         "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value",
+        "Pre-gathered data for demonstration"
         "Searches and plots places of interest with respect to input location as center. Google API Used",
         "카카오 KAKAO rest API를 검색하여 관심지역을 검색, 맵핑합니다."
     ]
