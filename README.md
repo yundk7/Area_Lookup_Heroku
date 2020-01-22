@@ -1,5 +1,8 @@
 Area Lookup
 
+This personal project started off with my curiosity out of thin air, 
+"how much impact would McDonalds, Starbucks have on real estate values?"
+
 | http://area-lookup.herokuapp.com/
 
 * Utilizing database from: Zillow and Google GEO API,
