@@ -402,7 +402,7 @@ def home():
     df["Page"] = [
         "/",
         "/us",
-        "/demo"
+        "/demo",
         "/ggl",
         "/kakao"
     ]
@@ -410,7 +410,7 @@ def home():
     df["Content"] = [
         "Here at the home page, data is stored in temporary sqlite database",
         "With data scraped and gathered through Census bureau, Google API, Zillow Datasets, analyze local amenities and its impact on real estate value",
-        "Pre-gathered data for demonstration"
+        "Pre-gathered data for demonstration",
         "Searches and plots places of interest with respect to input location as center. Google API Used",
         "카카오 KAKAO rest API를 검색하여 관심지역을 검색, 맵핑합니다."
     ]
