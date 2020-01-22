@@ -339,6 +339,40 @@ def kakao_api(centers_inp,pois_inp,radius):
     records["link"]=records["link"].apply(lambda x: '<a href="{0}">link</a>'.format(x))
     return (records)
 
+
+#highlighting function for regression
+def hl_regr(x):
+    c0 = 'border-color: black'
+    c1 = 'background-color: lightgreen'
+    c2 = 'background-color: lightblue'
+    c3 = 'background-color: yellow'
+    c4 = 'background-color: pink'
+    c5 = 'background-color: orange'
+    c6 = 'background-color: red'
+#     g1 = 'background-color: lightblue'
+#     g2 = 'background-color: pink'
+    #if want set no default colors 
+    #c2 = ''  
+    m1 = x["P>|t|"] > 0
+    m2 = x["P>|t|"] > .05
+    m3 = x["P>|t|"] > .1
+    m4 = x["P>|t|"] > .2
+    m5 = x["P>|t|"] > .3
+    m6 = x["P>|t|"] > .5
+#     mg1 = x["gender"] == 1
+#     mg2 = x["gender"] == 2
+
+    df1 = pd.DataFrame(c0,index=x.index, columns=x.columns)
+
+    df1.loc[m1, 'P>|t|'] = c1
+    df1.loc[m2, 'P>|t|'] = c2
+    df1.loc[m3, 'P>|t|'] = c3
+    df1.loc[m4, 'P>|t|'] = c4
+    df1.loc[m5, 'P>|t|'] = c5
+    df1.loc[m6, 'P>|t|'] = c6
+#     df1.loc[mg1, 'name'] = g1
+#     df1.loc[mg2, 'name'] = g2
+    return df1
 #========================================================================
 
 
@@ -464,7 +498,7 @@ def us():
         regr = regr.sample(sample)
 
         #using regression dataframe for reference
-        api = google_zip_df(regr,poi)
+        api = google_zip_df(regr[["coordinates","radius"]].dropna(),poi)
         geo_plt = plotly_geo(api)
 #         plotly_geo(api)
         con_sum = create_engine("sqlite:///summary.sqlite")
@@ -489,16 +523,19 @@ def us():
         rent = regression(rent)
         rent[0].to_sql("rent0",con_sum,if_exists="replace",index=False)
         rent[1].to_sql("rent1",con_sum,if_exists="replace",index=True)
+        rent1 = rent[1].style.apply(hl_regr, axis=None)
 
         sales = regr.drop(columns=["rent","roi"]).dropna()
         sales = regression(sales)
         sales[0].to_sql("sales0",con_sum,if_exists="replace",index=False)
         sales[1].to_sql("sales1",con_sum,if_exists="replace",index=True)
+        sales1 = sales[1].style.apply(hl_regr, axis=None)
 
         ratio = regr.drop(columns=["rent","sales"]).dropna()
         ratio = regression(ratio)
         ratio[0].to_sql("ratio0",con_sum,if_exists="replace",index=False)
         ratio[1].to_sql("ratio1",con_sum,if_exists="replace",index=True)
+        ratio1 = ratio[1].style.apply(hl_regr, axis=None)
         
         #clickable link to summary
         df = pd.DataFrame({"SUMMARY":[f"/summary"]})
@@ -518,17 +555,17 @@ def us():
             rent_plt+render_template("n.html")+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING RENT"+render_template("n.html")+
             rent[0].to_html()+render_template("n.html")+
-            rent[1].to_html()+render_template("n.html")+
+            rent1.render()+render_template("n.html")+
             "SALES: $/SQFT"+render_template("n.html")+
             sales_plt+render_template("n.html")+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING SALES"+render_template("n.html")+
             sales[0].to_html()+render_template("n.html")+
-            sales[1].to_html()+render_template("n.html")+
+            sales1.render()+render_template("n.html")+
             "ROI (PER YERAR: ROI = RENT*12/SALES*100)"+render_template("n.html")+
             ratio_plt+render_template("n.html")+
             "REGRESSION ANALYSIS ON IMPACT OF FACTORS REGARDING ROI"+render_template("n.html")+
             ratio[0].to_html()+render_template("n.html")+
-            ratio[1].to_html()+render_template("n.html")+
+            ratio1.render()+render_template("n.html")+
             df.to_html(escape=False)
         )
         
@@ -540,10 +577,16 @@ def summary():
     con = create_engine("sqlite:///summary.sqlite")
     rent0 = pd.read_sql("rent0",con)
     rent1 = pd.read_sql("rent1",con)
+    rent1 = rent1.style.apply(hl_regr, axis=None)
+    
     sales0 = pd.read_sql("sales0",con)
     sales1 = pd.read_sql("sales1",con)
+    sales1 = sales1.style.apply(hl_regr, axis=None)
+    
     ratio0 = pd.read_sql("ratio0",con)
     ratio1 = pd.read_sql("ratio1",con)
+    ratio1 = ratio1.style.apply(hl_regr, axis=None)
+    
     api = pd.read_sql("api",con)
     regr = pd.read_sql("regression",con)
     
@@ -556,11 +599,11 @@ def summary():
         "Result for:"+render_template("n.html")+
         search.to_html()+render_template("n.html")+
         "Regression analysis on rent"+render_template("n.html")+
-        rent0.to_html()+rent1.to_html()+render_template("n.html")+
+        rent0.to_html()+rent1.render()+render_template("n.html")+
         "Regression analysis on sales"+render_template("n.html")+
-        sales0.to_html()+sales1.to_html()+render_template("n.html")+
+        sales0.to_html()+sales1.render()+render_template("n.html")+
         "Regression analysis on ROI"+render_template("n.html")+
-        ratio0.to_html()+ratio1.to_html()+render_template("n.html")+
+        ratio0.to_html()+ratio1.render()+render_template("n.html")+
         "Pivot table of crime rates, population density, count and mean of POIS"+render_template("n.html")+
         regr.to_html()+render_template("n.html")+
         "Google API results"+render_template("n.html")+
