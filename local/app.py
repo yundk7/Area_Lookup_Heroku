@@ -483,9 +483,8 @@ def us():
             city = pd.read_sql("city",con_us)
             crime = pd.read_sql("crime",con_us)
             plt = pd.DataFrame({"zip":zips})
-            crime = pd.merge(crime,plt,on="zip")
-            crime = pd.merge(crime,city,on="zip")
-            plt = pd.merge(plt,city, on = "zip")
+            plt = pd.merge(crime,plt,on="zip")
+            plt = pd.merge(plt,city,on="zip")
             if typ == "address":
                 zips_df.reset_index(inplace=True)
                 plt = pd.merge(plt,zips_df,on="zip")
@@ -501,7 +500,7 @@ def us():
             
             return(
                     df.to_html()+render_template("n.html")+
-                    crime.to_html()+render_template("n.html")+
+                    plt.to_html()+render_template("n.html")+
                     map_plot+render_template("n.html")+
                     "RENT: $/SQFT"+render_template("n.html")+
                     rent_plt+render_template("n.html")+
