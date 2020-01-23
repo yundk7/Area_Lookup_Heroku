@@ -321,7 +321,7 @@ def kakao_api(centers_inp,pois_inp,radius):
         x = match_first['x']
         adr = match_first["address_name"]
         place_url = result["documents"][0]["place_url"]
-        center_df = pd.DataFrame({"center":[center],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[adr],"distance":[0],"link":[place_url],"X":[float(x)],"Y":[float(y)]})
+        center_df = pd.DataFrame({"center":[center],"poi":["YOU ARE HERE"],"name":[center],"address":[adr],"distance":[0],"link":[place_url],"X":[float(x)],"Y":[float(y)]})
         records = records.append(center_df)
 
         for poi in pois:
@@ -481,7 +481,10 @@ def us():
 
         if poi == "":
             city = pd.read_sql("city",con_us)
+            crime = pd.read_sql("crime",con_us)
             plt = pd.DataFrame({"zip":zips})
+            crime = pd.merge(crime,plt,on="zip")
+            crime = pd.merge(crime,city,on="zip")
             plt = pd.merge(plt,city, on = "zip")
             if typ == "address":
                 zips_df.reset_index(inplace=True)
@@ -498,6 +501,7 @@ def us():
             
             return(
                     df.to_html()+render_template("n.html")+
+                    crime.to_html()+render_template("n.html")+
                     map_plot+render_template("n.html")+
                     "RENT: $/SQFT"+render_template("n.html")+
                     rent_plt+render_template("n.html")+
@@ -534,6 +538,7 @@ def us():
         
         #since heroku is limited with request time, sampling out 8 zip codes to analyze
         sample = 8
+        regr.dropna(inplace=True)
         if len(regr) < sample:
             sample = len(regr)
         regr = regr.sample(sample)
@@ -541,7 +546,7 @@ def us():
         if typ =="address":
             regr["search"] = zips_df["search"]
         else:
-            regr["search"] = ""
+            regr["search"] = regr.index.values
         #using regression dataframe for reference
         api = google_zip_df(regr[["coordinates","radius","search"]].dropna(),poi)
         geo_plt = plotly_geo(api)
