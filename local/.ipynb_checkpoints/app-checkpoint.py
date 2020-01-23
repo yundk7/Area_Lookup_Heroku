@@ -115,6 +115,21 @@ def regression(df):
     print_model = model.summary2().tables
     return(print_model)
 
+def adr_zip(inp_list):
+    gkey = key("gkey")
+    zips = []
+    inp = []
+    for i in inp_list:
+        gkey = key("gkey")
+        target_url = (f'https://maps.googleapis.com/maps/api/geocode/json?address={i}&key={gkey}')
+        geo_data = requests.get(target_url).json()
+        z = str(geo_data["results"][0]["formatted_address"][-10:-5])
+        inp.append(i)
+        zips.append(z)
+    df = pd.DataFrame({"zip":zips,"search":inp})
+    df = df.groupby("zip").sum()
+    return(df)
+
 def google_zip_df(df,pois):
     records = pd.DataFrame()
     gkey = key("gkey")
@@ -125,7 +140,8 @@ def google_zip_df(df,pois):
         lat = center_coordinates.split(",")[0]
         lng = center_coordinates.split(",")[1]
         radius = df.radius[n]*1600
-        center_df = pd.DataFrame({"zip":[center_zip],"poi":["YOU ARE HERE"],"name":[center_zip],"address":[f"zip:{center_zip}"],"Y":[float(lat)],"X":[float(lng)]})
+        center_name = df["search"][n]
+        center_df = pd.DataFrame({"zip":[center_zip],"poi":["YOU ARE HERE"],"name":[center_name],"address":[f"zip:{center_zip}"],"Y":[float(lat)],"X":[float(lng)]})
         records = records.append(center_df)
         
         #get radius of each zip
@@ -225,7 +241,7 @@ def google_geo(srch_list,pois,radius):
         lng = geo_data["results"][0]["geometry"]["location"]["lng"]
         target_coordinates = str(lat) + "," + str(lng)
         link = geo_data["results"][0]["place_id"]
-        center_df = pd.DataFrame({"center":[s],"poi":["YOU ARE HERE"],"name":["YOU ARE HERE"],"address":[target_adr],"link":[link],"Y":[float(lat)],"X":[float(lng)]})
+        center_df = pd.DataFrame({"center":[s],"poi":["YOU ARE HERE"],"name":[s],"address":[target_adr],"link":[link],"Y":[float(lat)],"X":[float(lng)]})
         records = records.append(center_df)
         for poi in pois:
             params = {
@@ -431,15 +447,21 @@ def us():
 
         typ = typ.lower()
         #to take account typing differences such as space and capital letters
-        srch = srch.upper().replace(" ","").split(",")
+        
         poi = poi.upper()
-
-        #call in information to find what zipcodes are in search area(eg:chicago)
         con_us = create_engine("sqlite:///us_db.sqlite")
-        city = pd.read_sql("city",con_us)
-        city = city[city[typ].astype(str).str.replace(" ","").str.upper().isin(srch)]
-        #from zip codes obtained, select information needed from each database
-        zips = list(city["zip"])
+        if typ == "address":
+            srch = srch.split(",")
+            zips_df = adr_zip(srch)
+            zips = list(zips_df.index.values)
+        else:
+            #call in information to find what zipcodes are in search area(eg:chicago)
+            srch = srch.upper().replace(" ","").split(",")
+#             con_us = create_engine("sqlite:///us_db.sqlite")
+            city = pd.read_sql("city",con_us)
+            city = city[city[typ].astype(str).str.replace(" ","").str.upper().isin(srch)]
+            #from zip codes obtained, select information needed from each database
+            zips = list(city["zip"])
 
         #         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
         rent = pd.read_sql("zillow_rent",con_us)
@@ -458,8 +480,25 @@ def us():
         ratio_plt = zillowplot(ratio.T)
 
         if poi == "":
+            city = pd.read_sql("city",con_us)
+            plt = pd.DataFrame({"zip":zips})
+            plt = pd.merge(plt,city, on = "zip")
+            if typ == "address":
+                zips_df.reset_index(inplace=True)
+                plt = pd.merge(plt,zips_df,on="zip")
+            else:
+                plt["search"] = plt["zip"]
+            plt["size"] = 10
+            ptoken = key("ptoken")
+            px.set_mapbox_access_token(ptoken)
+            fig = px.scatter_mapbox(plt, lat="lat", lon="lon", size="size",color = "zip", hover_name="search",zoom = 13)
+            fig.update_layout(autosize=True,width=1500,height=750)
+                #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
+            map_plot = py.offline.plot(fig,output_type="div")
+            
             return(
                     df.to_html()+render_template("n.html")+
+                    map_plot+render_template("n.html")+
                     "RENT: $/SQFT"+render_template("n.html")+
                     rent_plt+render_template("n.html")+
                     "SALES: $/SQFT"+render_template("n.html")+
@@ -499,8 +538,12 @@ def us():
             sample = len(regr)
         regr = regr.sample(sample)
 
+        if typ =="address":
+            regr["search"] = zips_df["search"]
+        else:
+            regr["search"] = ""
         #using regression dataframe for reference
-        api = google_zip_df(regr[["coordinates","radius"]].dropna(),poi)
+        api = google_zip_df(regr[["coordinates","radius","search"]].dropna(),poi)
         geo_plt = plotly_geo(api)
 #         plotly_geo(api)
         con_sum = create_engine("sqlite:///summary.sqlite")
@@ -516,7 +559,7 @@ def us():
 
         regr = merge_dfs([regr,API_pivot])
 
-        regr.drop(columns = ["coordinates","area","radius"],inplace=True)
+        regr.drop(columns = ["coordinates","area","radius","search"],inplace=True)
         #saving pivot table in database for summary display
         regr.to_sql("regression",con_sum,if_exists="replace")
         
