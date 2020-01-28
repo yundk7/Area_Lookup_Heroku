@@ -1,5 +1,7 @@
 Area Lookup
 
+![bg.png](bg.png)
+
 This personal project started off with my curiosity out of thin air, 
 "how much impact would McDonalds, Starbucks have on real estate values?"
 
