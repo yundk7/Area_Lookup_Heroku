@@ -694,13 +694,15 @@ def check():
 def ggl():
     if request.method == "POST":
         center = request.form["center"]
-        center = center.split(",")
         pois = request.form["pois"]
         radius = request.form["radius"]
+        srch = pd.DataFrame({"Title":["Center","Place of Interest","Radius"]})
+        srch["Input"] = [center,pois,radius]
+        center = center.split(",")
         radius = float(radius) * 1600
         df = google_geo(center,pois,radius)
         plot = plotly_geo(df)
-        return(df.to_html(escape=False)+ plot)
+        return(srch.to_html() + plot + df.to_html(escape=False))
     return render_template("form_ggl.html")
 
 @app.route("/kakao", methods=["GET", "POST"])
@@ -709,12 +711,20 @@ def kakao():
         center = request.form["center"]
         pois = request.form["pois"]
         radius = request.form["radius"]
+        srch = pd.DataFrame({"Title":["중심","관심지역","반경"]})
+        srch["입력"] = [center,pois,radius]
         df = kakao_api(center,pois,radius)
         plot = plotly_geo(df)
         
-        return(df.to_html(escape=False)+ plot)
+        return(srch.to_html() + plot + df.to_html(escape=False))
     return render_template("form_kakao.html")
 
+@app.route("/kakaodemo")
+def kakaodemo():
+    back = pd.DataFrame({"뒤로가기 버튼":["/kakao"]})
+    back["뒤로가기 버튼"] = back["뒤로가기 버튼"].apply(lambda x: '<a href="{0}">나의 검색하러 가기</a>'.format(x))
+    
+    return back.to_html(escape=False) + render_template("/demo/kakaomap.html") +  render_template("/demo/kakao.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
