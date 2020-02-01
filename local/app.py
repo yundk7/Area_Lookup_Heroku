@@ -398,7 +398,8 @@ def home():
     #for USA database
     con = create_engine("sqlite:///us_db.sqlite")
     #upload database if no table exist(when heroku is restarted)
-    if len(con.table_names())==0:
+    dblist = ["zillow_rent","zillow_sales","city","crime","area"]
+    if len([x for x in dblist if x not in con.table_names()])!=0:
         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
         rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
 
