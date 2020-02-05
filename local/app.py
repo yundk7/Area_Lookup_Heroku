@@ -30,11 +30,11 @@ app = Flask(__name__)
 def key(key):
     #API keys
     if key == "gkey":
-        key = "YOUR KEY HERE"
+        key = "AIzaSyCx9a5SZ-y42Wu2fQeqmHsfKFRk4djJsAs"
     elif key == "kkey":
-        key = "YOUR KEY HERE"
+        key = "KakaoAK 8809fcb48aa9900788adbd9f162c6b25"
     elif key == "ptoken":
-        key = "YOUR KEY HERE"
+        key = "pk.eyJ1IjoidGl2bWU3IiwiYSI6ImNrMWEwZDVtNDI4Zm4zYm1vY3o3Z25zejEifQ._yTPkj3nXTzor72zIevLCQ"
     return(key)
 
 def zillowELT(df,zips_list):
