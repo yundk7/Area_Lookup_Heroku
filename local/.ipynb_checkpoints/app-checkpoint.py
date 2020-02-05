@@ -17,7 +17,7 @@ py.offline.init_notebook_mode(connected = True)
 import requests
 import json
 import math
-from bs4 import BeautifulSoup as bs
+# from bs4 import BeautifulSoup as bs
 import re
 from sqlalchemy import create_engine
 
@@ -730,11 +730,13 @@ def naver():
         js = pd.DataFrame()
         for query in queries:
             response = requests.get(f"https://store.naver.com/restaurants/list?query={query}&sortingOrder=reviewCount")
-            soup = bs(response.text, 'html.parser')
+#             soup = bs(response.text, 'html.parser')
             try:
-                txt = str(soup.find_all("script")[2])
-                txt = txt.replace("<script>window.PLACE_STATE=","").replace("</script>","")
+#                 txt = str(soup.find_all("script")[2])
+#                 txt = txt.replace("<script>window.PLACE_STATE=","").replace("</script>","")
+                txt = response.text
                 txt = txt[txt.find(r'{"id":'):]
+                return(txt)
                 txt = re.split(r'({"id":)',txt)
                 txt = txt[1:]
                 apnd = txt[0]
@@ -755,6 +757,7 @@ def naver():
                 col = [x for x in ["name","addr","x","y","category","michelinGuide","bookingReviewCount","blogCafeReviewCount","totalReviewCount","microReview","priceCategory","tags"] if x in js.columns]
                 js = js[col].reset_index(drop=True)
             except IndexError:
+                
                 pass
         js["totalReviewCount"] = pd.to_numeric(js["totalReviewCount"].astype(str).str.replace(",",""))
         js.fillna(0,inplace=True)
