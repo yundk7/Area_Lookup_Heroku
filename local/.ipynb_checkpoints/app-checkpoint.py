@@ -17,8 +17,8 @@ py.offline.init_notebook_mode(connected = True)
 import requests
 import json
 import math
-# from bs4 import BeautifulSoup as bs
-# import re
+from bs4 import BeautifulSoup as bs
+import re
 from sqlalchemy import create_engine
 
 # from sklearn import linear_model
@@ -229,6 +229,16 @@ def plotly_geo(df):
         #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
     return(py.offline.plot(fig,output_type="div"))
 
+def naver_geo(df):
+    df["size"] = 10
+    ptoken = key("ptoken")
+    px.set_mapbox_access_token(ptoken)
+    hover = [x for x in ["microReview","priceCategory","totalReviewCount","category","tags"] if x in df.columns]
+    fig = px.scatter_mapbox(df, lat="y", lon="x", color = "totalReviewCount", size = "size", hover_name="name",zoom = 13, hover_data = hover,color_continuous_scale=px.colors.diverging.Portland)
+    fig.update_layout(autosize=True,width=1500,height=750)
+        #                           ,margin=go.layout.Margin(l=50,r=50,b=100,t=100,pad=4))
+    return(py.offline.plot(fig,output_type="div"))
+
 def google_geo(srch_list,pois,radius):
     records = pd.DataFrame()
     gkey = key("gkey")
@@ -398,7 +408,8 @@ def home():
     #for USA database
     con = create_engine("sqlite:///us_db.sqlite")
     #upload database if no table exist(when heroku is restarted)
-    if len(con.table_names())==0:
+    dblist = ["zillow_rent","zillow_sales","city","crime","area"]
+    if len([x for x in dblist if x not in con.table_names()])!=0:
         rent = pd.read_csv("https://raw.githubusercontent.com/yundk7/area_lookup_heroku/master/local/Zip_ZriPerSqft_AllHomes.csv")
         rent.to_sql("zillow_rent",con,if_exists = "replace", index=False)
 
@@ -705,6 +716,54 @@ def ggl():
         return(srch.to_html() + plot + df.to_html(escape=False))
     return render_template("form_ggl.html")
 
+@app.route("/naver",methods=["GET","POST"])
+def naver():
+    if request.method == "POST":
+        places = request.form["places"]
+        places = places.split(",")
+        pois = request.form["pois"]
+        pois = pois.split(",")
+        queries = []
+        for place in places:
+            for poi in pois:
+                queries.append(place + " " + poi)
+        js = pd.DataFrame()
+        for query in queries:
+            response = requests.get(f"https://store.naver.com/restaurants/list?query={query}&sortingOrder=reviewCount")
+            soup = bs(response.text, 'html.parser')
+            try:
+                txt = str(soup.find_all("script")[2])
+                txt = txt.replace("<script>window.PLACE_STATE=","").replace("</script>","")
+                txt = txt[txt.find(r'{"id":'):]
+                txt = re.split(r'({"id":)',txt)
+                txt = txt[1:]
+                apnd = txt[0]
+                txt0 = []
+                for i in range(len(txt)):
+                    if txt[i]!=apnd:
+                        txt0.append(apnd + txt[i][0:-1])
+                ct=-1
+                for t in txt0:
+                    ct+=1
+                    try:
+                        t = t.replace(",null","")
+                        js = js.append(pd.read_json(t,lines=True),sort=False)
+                    except ValueError:
+                        t = t.split(r'"total"')[0][0:-2]
+                        js = js.append(pd.read_json(t,lines=True),sort=False)
+                        pass
+                col = [x for x in ["name","addr","x","y","category","michelinGuide","bookingReviewCount","blogCafeReviewCount","totalReviewCount","microReview","priceCategory","tags"] if x in js.columns]
+                js = js[col].reset_index(drop=True)
+            except IndexError:
+                pass
+        js["totalReviewCount"] = pd.to_numeric(js["totalReviewCount"].astype(str).str.replace(",",""))
+        js.fillna(0,inplace=True)
+        naver = naver_geo(js)
+
+        return(f"장소: {places} || 시설: {pois}" + naver)
+
+    return render_template("form_naver.html")
+    
 @app.route("/kakao", methods=["GET", "POST"])
 def kakao():
     if request.method == "POST":
