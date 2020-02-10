@@ -1,5 +1,7 @@
 "How much impact would McDonalds, Starbucks have on real estate values?"
+
 In addition to project for finding optimal area to live in terms of price and local amenties,
+
 I attempted to go in depth in relationship between the price of real estate and its nearby places.
 
 ![bg.png](bg.png)
