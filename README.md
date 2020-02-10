@@ -15,7 +15,7 @@ I attempted to go in depth in relationship between the price of real estate and 
 * Webscraping crime data from : https://www.bestplaces.net/crime/
 * and population density of zipcodes from : http://zipatlas.com/us/zip-code-comparison/population-density.1.htm
 * Then displays the relationship between real estate values and local amenities.
-* Below is example of inputs: (For more Pre-gathered results of major cities (http://area-lookup.herokuapp.com/demo))
+* Below is example of inputs: (For more Pre-gathered results of major cities (http://dq-27.herokuapp.com/us_places/demo))
 ![chicago.png](chicago.png)
 
 
