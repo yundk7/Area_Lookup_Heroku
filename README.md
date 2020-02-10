@@ -1,3 +1,5 @@
+| http://dq-27.herokuapp.com/us_places
+
 "How much impact would McDonalds, Starbucks have on real estate values?"
 
 In addition to project for finding optimal area to live in terms of price and local amenties,
@@ -8,7 +10,6 @@ I attempted to go in depth in relationship between the price of real estate and 
 
 
 
-| http://area-lookup.herokuapp.com/
 
 * Utilizing database from: Zillow and Google GEO API,
 * Webscraping crime data from : https://www.bestplaces.net/crime/
