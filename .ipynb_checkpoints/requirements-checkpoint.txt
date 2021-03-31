@@ -27,7 +27,7 @@ requests==2.22.0
 json5==0.8.4
 plotly==4.1.0
 DateTime==4.3
-lxml==4.3.4
+lxml==4.6.3
 html5lib==1.0.1
 beautifulsoup4==4.7.1
 DateTime==4.3
